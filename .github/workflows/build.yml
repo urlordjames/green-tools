@@ -26,3 +26,23 @@ jobs:
         name: "macos"
         path: "dist/*"
         if-no-files-found: error
+
+  build-deb:
+    runs-on: "ubuntu-latest"
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: "install cargo-dev"
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: cargo-deb
+
+    - name: "build"
+      uses: actions-rs/cargo@v1
+      with:
+        command: deb
+
+    - name: "list stuff"
+      run: ls target -lR
