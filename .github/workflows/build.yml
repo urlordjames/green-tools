@@ -18,8 +18,8 @@ jobs:
     - name: "prepare dist folder"
       run: |
         mkdir dist
-        cp target/release/update dist
-        cp target/release/manifest dist
+        cp target/release/green-update dist
+        cp target/release/green-manifest dist
     
     - uses: actions/upload-artifact@v3
       with:
