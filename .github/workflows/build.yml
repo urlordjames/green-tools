@@ -33,7 +33,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: "install cargo-dev"
+    - name: "install cargo-deb"
       uses: actions-rs/cargo@v1
       with:
         command: install

@@ -2,6 +2,8 @@
 name = "green-tools"
 version = "0.1.0"
 edition = "2021"
+authors = ["urlordjames <32751441+urlordjames@users.noreply.github.com>"]
+license = "GPL-3.0+"
 
 [dependencies]
 tokio = { version = "1.19", default-features = false, features = [ "macros", "rt-multi-thread" ] }
