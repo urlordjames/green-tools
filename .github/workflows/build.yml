@@ -44,5 +44,8 @@ jobs:
       with:
         command: deb
 
-    - name: "list stuff"
-      run: ls target -lR
+    - uses: actions/upload-artifact@v3
+      with:
+        name: "debian"
+        path: "target/debian/*"
+        if-no-files-found: error
