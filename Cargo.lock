@@ -209,7 +209,7 @@ dependencies = [
 [[package]]
 name = "green-lib"
 version = "0.1.1"
-source = "git+https://github.com/urlordjames/green-lib.git#6d107cd163b8d755fe677fb5d0efda4728a7f6e3"
+source = "git+https://github.com/urlordjames/green-lib.git#cdd763452af876b03b8b573aac8e5f45fd560492"
 dependencies = [
  "reqwest",
  "serde",
