@@ -24,12 +24,12 @@ async fn main() {
 		None => green_lib::util::minecraft_path()
 	};
 
-	directory.upgrade_game_folder(&path, Some((|t| {
+	directory.upgrade_game_folder(&path, |t| {
 		TOTAL.store(t, Ordering::SeqCst);
 	}, || {
 		let n = N.fetch_add(1, Ordering::SeqCst);
 		println!("downloaded file {}/{}...", n, TOTAL.load(Ordering::SeqCst));
-	}))).await;
+	}).await;
 
 	println!("finished");
 }
