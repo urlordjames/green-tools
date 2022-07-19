@@ -19,7 +19,8 @@ fn main() {
 
 	let new_directory = to_directory(&args.path, &mut directory, true, args.base_url);
 
-	println!("{}", serde_json::to_string(&new_directory).expect("cannot serialize manifest"));
+	let manifest_file = std::fs::File::create("manifest.json").unwrap();
+	serde_json::to_writer(&manifest_file, &new_directory).expect("cannot serialize manifest");
 }
 
 fn to_directory(path: &std::path::Path, directory: &mut Directory, top_level: bool, url: url::Url) -> Directory {
