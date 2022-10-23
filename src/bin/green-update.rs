@@ -40,7 +40,7 @@ async fn main() {
 						total = Some(size);
 					}
 				},
-				None => ()
+				None => break
 			}
 		}
 	});
