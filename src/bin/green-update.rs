@@ -1,5 +1,4 @@
 use clap::Parser;
-use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
 
 #[derive(Parser)]
 struct Args {
@@ -7,11 +6,6 @@ struct Args {
 	url: url::Url,
 
 	path: Option<std::path::PathBuf>
-}
-
-lazy_static::lazy_static! {
-	static ref N: AtomicU16 = AtomicU16::new(0);
-	static ref TOTAL: AtomicUsize = AtomicUsize::new(0);
 }
 
 #[tokio::main]
@@ -24,12 +18,34 @@ async fn main() {
 		None => green_lib::util::minecraft_path()
 	};
 
-	directory.upgrade_game_folder(&path, |t| {
-		TOTAL.store(t, Ordering::SeqCst);
-	}, || {
-		let n = N.fetch_add(1, Ordering::SeqCst);
-		println!("downloaded file {}/{}...", n, TOTAL.load(Ordering::SeqCst));
-	}).await;
+	let (mut rx, handle) = directory.upgrade_game_folder(&path).await;
+
+	tokio::spawn(async move {
+		let mut counter = None;
+		let mut total = None;
+
+		loop {
+			match rx.recv().await {
+				Some(msg) => match msg {
+					green_lib::UpgradeStatus::Tick => {
+						counter = counter.map(|val| {
+							let new_val = val + 1;
+							let total = total.expect("total should be set");
+							println!("{}/{} ({:.1}%)", new_val, total, (new_val as f32 / total as f32) * 100.0);
+							new_val
+						});
+					},
+					green_lib::UpgradeStatus::Length(size) => {
+						counter = Some(0);
+						total = Some(size);
+					}
+				},
+				None => ()
+			}
+		}
+	});
+
+	handle.await.unwrap();
 
 	println!("finished");
 }
