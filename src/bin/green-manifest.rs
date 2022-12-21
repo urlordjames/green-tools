@@ -27,7 +27,8 @@ struct CustomExtra {
 
 #[derive(Deserialize, Debug)]
 struct ModrinthExtra {
-	version: String
+	version: String,
+	deps: Option<std::collections::HashMap<String, ModrinthExtra>> // kind of a hack but it works
 }
 
 #[derive(Deserialize)]
@@ -92,13 +93,7 @@ async fn main() {
 		}
 
 		for (mod_id, extra) in extras.modrinth.unwrap_or_default() {
-			let (url, name) = get_modrinth_data(&mod_id, &extra).await;
-
-			mods_dir.files.push(File {
-				name,
-				sha: get_sha(&url).await,
-				url
-			});
+			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, mods_dir, extra.deps.as_ref()).await;
 		}
 	}
 
@@ -106,18 +101,50 @@ async fn main() {
 	serde_json::to_writer(&manifest_file, &directory).expect("cannot serialize manifest");
 }
 
-async fn get_modrinth_data(mod_id: &str, extra: &ModrinthExtra) -> (String, String) {
+#[async_recursion::async_recursion]
+async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthExtra>>) {
+	let jar = &version["files"][0];
+	let url = jar["url"].as_str().unwrap();
+
+	let dependencies: &Vec<serde_json::Value> = version["dependencies"].as_array().unwrap();
+	for dependency in dependencies.iter() {
+		match dependency["version_id"].as_str() {
+			Some(dep_version) => download_modrinth(&get_modrinth_version(dep_version).await, mods_dir, None).await,
+			None => {
+				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(dependency["project_id"].as_str().unwrap()) {
+					Some(dep_extra) => download_modrinth(&get_modrinth_version(&dep_extra.version).await, mods_dir, dep_extra.deps.as_ref()).await,
+					None => panic!("you are required to specify the version of dependency {:?}", dependency["project_id"])
+				};
+			}
+		};
+	}
+
+	mods_dir.files.push(File {
+		name: jar["filename"].as_str().unwrap().to_string(),
+		sha: get_sha(url).await,
+		url: url.to_string()
+	});
+}
+
+async fn get_modrinth_version(version_id: &str) -> serde_json::Value {
+	let resp = reqwest::get(format!("https://api.modrinth.com/v2/version/{}", version_id)).await.unwrap();
+	if !resp.status().is_success() {
+		panic!("failed to fetch modrinth version {:?}", version_id);
+	}
+
+	serde_json::from_str(&resp.text().await.unwrap()).unwrap()
+}
+
+async fn get_modrinth_data(mod_id: &str, extra: &ModrinthExtra) -> serde_json::Value {
 	let resp = reqwest::get(format!("https://api.modrinth.com/v2/project/{}/version", mod_id)).await.unwrap();
 	if !resp.status().is_success() {
-		panic!("failed to fetch modrinth version for {:?}", extra);
+		panic!("failed to fetch modrinth versions for {:?}", extra);
 	}
 
 	let versions: serde_json::Value = serde_json::from_str(&resp.text().await.unwrap()).unwrap();
 	let versions: &Vec<serde_json::Value> = versions.as_array().unwrap();
 
-	let version = versions.iter().find(|v| v["name"] == extra.version).unwrap();
-	let jar = &version["files"][0];
-	(jar["url"].as_str().unwrap().to_string(), jar["filename"].as_str().unwrap().to_string())
+	versions.iter().find(|v| v["name"] == extra.version).unwrap().clone()
 }
 
 async fn get_sha(url: &str) -> String {
