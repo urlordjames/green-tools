@@ -25,10 +25,16 @@ struct CustomExtra {
 	url: String
 }
 
+#[derive(Deserialize, Debug)]
+struct ModrinthExtra {
+	version: String
+}
+
 #[derive(Deserialize)]
 struct Extras {
 	curseforge: Option<std::collections::HashMap<String, CurseForgeExtra>>,
-	custom: Option<std::collections::HashMap<String, CustomExtra>>
+	custom: Option<std::collections::HashMap<String, CustomExtra>>,
+	modrinth: Option<std::collections::HashMap<String, ModrinthExtra>>
 }
 
 #[tokio::main]
@@ -84,10 +90,34 @@ async fn main() {
 				url: extra.url
 			});
 		}
+
+		for (mod_id, extra) in extras.modrinth.unwrap_or_default() {
+			let (url, name) = get_modrinth_data(&mod_id, &extra).await;
+
+			mods_dir.files.push(File {
+				name,
+				sha: get_sha(&url).await,
+				url
+			});
+		}
 	}
 
 	let manifest_file = std::fs::File::create("manifest.json").unwrap();
 	serde_json::to_writer(&manifest_file, &directory).expect("cannot serialize manifest");
+}
+
+async fn get_modrinth_data(mod_id: &str, extra: &ModrinthExtra) -> (String, String) {
+	let resp = reqwest::get(format!("https://api.modrinth.com/v2/project/{}/version", mod_id)).await.unwrap();
+	if !resp.status().is_success() {
+		panic!("failed to fetch modrinth version for {:?}", extra);
+	}
+
+	let versions: serde_json::Value = serde_json::from_str(&resp.text().await.unwrap()).unwrap();
+	let versions: &Vec<serde_json::Value> = versions.as_array().unwrap();
+
+	let version = versions.iter().find(|v| v["name"] == extra.version).unwrap();
+	let jar = &version["files"][0];
+	(jar["url"].as_str().unwrap().to_string(), jar["filename"].as_str().unwrap().to_string())
 }
 
 async fn get_sha(url: &str) -> String {
