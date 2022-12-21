@@ -16,7 +16,8 @@ struct Args {
 
 #[derive(Deserialize)]
 struct CurseForgeExtra {
-	file_id: u32
+	id1: u32,
+	id2: u32
 }
 
 #[derive(Deserialize)]
@@ -67,7 +68,7 @@ async fn main() {
 		let extras: Extras = toml::from_str(&std::fs::read_to_string(extras).unwrap()).unwrap();
 
 		for (file_name, extra) in extras.curseforge.unwrap_or_default() {
-			let url = format!("https://mediafilez.forgecdn.net/files/4226/{}/{}", extra.file_id, file_name);
+			let url = format!("https://mediafilez.forgecdn.net/files/{}/{}/{}", extra.id1, extra.id2, file_name);
 
 			mods_dir.files.push(File {
 				name: file_name,
