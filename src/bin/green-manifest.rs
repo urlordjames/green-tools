@@ -28,7 +28,13 @@ struct CustomExtra {
 #[derive(Deserialize, Debug)]
 struct ModrinthExtra {
 	version: String,
-	deps: Option<std::collections::HashMap<String, ModrinthExtra>> // kind of a hack but it works
+	deps: Option<std::collections::HashMap<String, ModrinthDep>>
+}
+
+#[derive(Deserialize, Debug)]
+struct ModrinthDep {
+	version_id: String,
+	deps: Option<std::collections::HashMap<String, ModrinthDep>>
 }
 
 #[derive(Deserialize)]
@@ -102,7 +108,7 @@ async fn main() {
 }
 
 #[async_recursion::async_recursion]
-async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthExtra>>) {
+async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
 	let jar = &version["files"][0];
 	let url = jar["url"].as_str().unwrap();
 
@@ -112,7 +118,7 @@ async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory
 			Some(dep_version) => download_modrinth(&get_modrinth_version(dep_version).await, mods_dir, None).await,
 			None => {
 				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(dependency["project_id"].as_str().unwrap()) {
-					Some(dep_extra) => download_modrinth(&get_modrinth_version(&dep_extra.version).await, mods_dir, dep_extra.deps.as_ref()).await,
+					Some(dep_extra) => download_modrinth(&get_modrinth_version(&dep_extra.version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
 					None => panic!("you are required to specify the version of dependency {:?}", dependency["project_id"])
 				};
 			}
