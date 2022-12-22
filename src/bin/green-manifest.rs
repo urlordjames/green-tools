@@ -26,8 +26,18 @@ struct CustomExtra {
 }
 
 #[derive(Deserialize, Debug)]
+enum ModrinthVersion {
+	#[serde(rename = "version")]
+	Version(String),
+
+	#[serde(rename = "version_id")]
+	VersionId(String)
+}
+
+#[derive(Deserialize, Debug)]
 struct ModrinthExtra {
-	version: String,
+	#[serde(flatten)]
+	version: ModrinthVersion,
 	deps: Option<std::collections::HashMap<String, ModrinthDep>>
 }
 
@@ -150,7 +160,10 @@ async fn get_modrinth_data(mod_id: &str, extra: &ModrinthExtra) -> serde_json::V
 	let versions: serde_json::Value = serde_json::from_str(&resp.text().await.unwrap()).unwrap();
 	let versions: &Vec<serde_json::Value> = versions.as_array().unwrap();
 
-	versions.iter().find(|v| v["name"] == extra.version).unwrap().clone()
+	versions.iter().find(|v| match &extra.version {
+		ModrinthVersion::Version(version) => v["name"] == *version,
+		ModrinthVersion::VersionId(version_id) => v["id"] == *version_id
+	}).unwrap().clone()
 }
 
 async fn get_sha(url: &str) -> String {
