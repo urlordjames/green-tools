@@ -48,6 +48,7 @@ struct ModrinthDep {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Extras {
 	curseforge: Option<std::collections::HashMap<String, CurseForgeExtra>>,
 	custom: Option<std::collections::HashMap<String, CustomExtra>>,
