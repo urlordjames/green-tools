@@ -42,8 +42,18 @@ struct ModrinthExtra {
 }
 
 #[derive(Deserialize, Debug)]
+enum ModrinthDepVersion {
+	#[serde(rename = "version_id")]
+	VersionId(String),
+
+	#[serde(rename = "ignore")]
+	Ignore(bool)
+}
+
+#[derive(Deserialize, Debug)]
 struct ModrinthDep {
-	version_id: String,
+	#[serde(flatten)]
+	version: ModrinthDepVersion,
 	deps: Option<std::collections::HashMap<String, ModrinthDep>>
 }
 
@@ -129,7 +139,11 @@ async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory
 			Some(dep_version) => download_modrinth(&get_modrinth_version(dep_version).await, mods_dir, None).await,
 			None => {
 				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(dependency["project_id"].as_str().unwrap()) {
-					Some(dep_extra) => download_modrinth(&get_modrinth_version(&dep_extra.version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
+					Some(dep_extra) => match &dep_extra.version {
+						ModrinthDepVersion::VersionId(version_id) => download_modrinth(&get_modrinth_version(version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
+						ModrinthDepVersion::Ignore(true) => (),
+						ModrinthDepVersion::Ignore(false) => panic!("ignore = false has no meaning")
+					},
 					None => panic!("you are required to specify the version of dependency {:?}", dependency["project_id"])
 				};
 			}
