@@ -36,6 +36,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        override: true
+
     - name: "install cargo-deb"
       uses: actions-rs/cargo@v1
       with:
@@ -45,7 +51,7 @@ jobs:
     - name: "build"
       uses: actions-rs/cargo@v1
       with:
-        target: ${{ matrix.target }}
+        args: "--target ${{ matrix.target }}"
         command: deb
 
     - uses: actions/upload-artifact@v3
