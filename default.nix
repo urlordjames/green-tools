@@ -5,6 +5,14 @@ in pkgs.rustPlatform.buildRustPackage {
 
 	src = ./.;
 
+	nativeBuildInputs = with pkgs; [
+		pkgconfig
+	];
+
+	buildInputs = with pkgs; [
+		openssl
+	];
+
 	cargoLock = {
 		lockFile = ./Cargo.lock;
 		outputHashes = {
