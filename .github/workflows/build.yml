@@ -43,7 +43,7 @@ jobs:
         override: true
 
     - name: "install arm gcc"
-      if: ${{ matrix.target == "aarch64-unknown-linux-gnu" }}
+      if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
       run: apt install gcc-aarch64-linux-gnu -y
 
     - name: "install cargo-deb"
