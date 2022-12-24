@@ -50,11 +50,11 @@ jobs:
 
     - name: "build"
       uses: actions-rs/cargo@v1
+      env:
+        CC: gcc-10
+        CXX: g++-10
       with:
         args: "--target ${{ matrix.target }}"
-        env:
-          CC: gcc-10
-          CXX: g++-10
         command: deb
 
     - uses: actions/upload-artifact@v3
