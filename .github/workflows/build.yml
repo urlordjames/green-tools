@@ -55,7 +55,6 @@ jobs:
     - name: "build"
       uses: actions-rs/cargo@v1
       with:
-        use-cross: true
         args: "--target ${{ matrix.target }}"
         command: deb
 
