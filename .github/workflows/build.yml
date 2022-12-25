@@ -71,5 +71,5 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: "green-update (arm)"
-        path: "target/release/green-update"
+        path: "target/aarch64-unknown-linux-gnu/release/green-update"
         if-no-files-found: error
