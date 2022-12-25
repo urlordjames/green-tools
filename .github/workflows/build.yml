@@ -29,22 +29,9 @@ jobs:
 
   build-deb:
     runs-on: "ubuntu-latest"
-    strategy:
-      matrix:
-        target: ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
     steps:
     - uses: actions/checkout@v2
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.target }}
-        override: true
-
-    - name: "install arm gcc"
-      if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
-      run: "sudo dpkg --add-architecture arm64 && sudo apt install gcc-aarch64-linux-gnu libgcc-10-dev:arm64 -y"
 
     - name: "install cargo-deb"
       uses: actions-rs/cargo@v1
@@ -55,11 +42,34 @@ jobs:
     - name: "build"
       uses: actions-rs/cargo@v1
       with:
-        args: "--target ${{ matrix.target }}"
         command: deb
 
     - uses: actions/upload-artifact@v3
       with:
-        name: "debian ${{ matrix.target }}"
-        path: "target/${{ matrix.target }}/debian/*"
+        name: "debian"
+        path: "target/debian/*"
+        if-no-files-found: error
+
+  build-arm:
+    runs-on: "ubuntu-latest"
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-unknown-linux-gnu
+
+    - name: "build"
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: "build"
+        args: "--target aarch64-unknown-linux-gnu --release"
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: "green-update (arm)"
+        path: "target/release/green-update"
         if-no-files-found: error
