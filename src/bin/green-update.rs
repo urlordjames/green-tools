@@ -18,7 +18,10 @@ async fn main() {
 		None => green_lib::util::minecraft_path()
 	};
 
-	let (mut rx, handle) = directory.upgrade_game_folder(&path).await;
+	let (tx, mut rx) = tokio::sync::mpsc::channel(128);
+	let handle = tokio::spawn(async move {
+		directory.upgrade_game_folder(&path, Some(tx)).await;
+	});
 
 	tokio::spawn(async move {
 		let mut counter = None;
