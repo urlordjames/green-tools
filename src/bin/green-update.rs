@@ -27,23 +27,20 @@ async fn main() {
 		let mut counter = None;
 		let mut total = None;
 
-		loop {
-			match rx.recv().await {
-				Some(msg) => match msg {
-					green_lib::UpgradeStatus::Tick => {
-						counter = counter.map(|val| {
-							let new_val = val + 1;
-							let total = total.expect("total should be set");
-							println!("{}/{} ({:.1}%)", new_val, total, (new_val as f32 / total as f32) * 100.0);
-							new_val
-						});
-					},
-					green_lib::UpgradeStatus::Length(size) => {
-						counter = Some(0);
-						total = Some(size);
-					}
+		while let Some(msg) = rx.recv().await {
+			match msg {
+				green_lib::UpgradeStatus::Tick => {
+					counter = counter.map(|val| {
+						let new_val = val + 1;
+						let total = total.expect("total should be set");
+						println!("{}/{} ({:.1}%)", new_val, total, (new_val as f32 / total as f32) * 100.0);
+						new_val
+					});
 				},
-				None => break
+				green_lib::UpgradeStatus::Length(size) => {
+					counter = Some(0);
+					total = Some(size);
+				}
 			}
 		}
 	});

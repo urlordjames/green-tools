@@ -69,14 +69,8 @@ struct Extras {
 async fn main() {
 	let args = Args::parse();
 
-	let mut directory = Directory {
-		name: String::new(),
-		files: vec![],
-		children: vec![]
-	};
-
-	directory = match &args.path {
-		Some(path) => to_directory(path, &mut directory, true, args.base_url.unwrap()),
+	let mut directory = match &args.path {
+		Some(path) => to_directory(path, true, args.base_url.unwrap()),
 		None => Directory {
 			name: String::new(),
 			files: vec![],
@@ -191,7 +185,7 @@ async fn get_sha(url: &str) -> String {
 	format!("{:x}", Sha256::digest(&contents))
 }
 
-fn to_directory(path: &std::path::Path, directory: &mut Directory, top_level: bool, url: url::Url) -> Directory {
+fn to_directory(path: &std::path::Path, top_level: bool, url: url::Url) -> Directory {
 	let mut children = vec![];
 	let mut files = vec![];
 
@@ -203,7 +197,7 @@ fn to_directory(path: &std::path::Path, directory: &mut Directory, top_level: bo
 		if file_type.is_dir() {
 			file_name.push('/');
 			let new_url = url.join(&file_name).unwrap();
-			children.push(to_directory(&file.path(), directory, false, new_url));
+			children.push(to_directory(&file.path(), false, new_url));
 		} else if file_type.is_file() {
 			let new_url = url.join(&file_name).unwrap();
 			let contents = std::fs::read(file.path()).expect("cannot read file");

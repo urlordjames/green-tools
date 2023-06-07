@@ -21,6 +21,7 @@
 				devShell = pkgs.mkShell {
 					buildInputs = with pkgs; [
 						cargo
+						clippy
 					];
 				};
 
