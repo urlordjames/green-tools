@@ -8,3 +8,6 @@
 # test stuff
 /test
 /manifest.json
+
+# nix build
+/result
