@@ -186,7 +186,7 @@ fn to_directory(path: &std::path::Path, url: url::Url) -> Directory {
 		let file_name = file.file_name().into_string().expect("invalid file name");
 
 		if file_type.is_dir() {
-			let new_url = url.join(&format!("/{file_name}")).unwrap();
+			let new_url = url.join(&format!("{file_name}/")).unwrap();
 			children.insert(file_name, to_directory(&file.path(), new_url));
 		} else if file_type.is_file() {
 			let new_url = url.join(&file_name).unwrap();
