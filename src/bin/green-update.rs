@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
-	#[clap(long, default_value = "https://s3-us-east-2.amazonaws.com/le-mod-bucket/manifest.json")]
+	#[clap(long, default_value = "https://s3-us-east-2.amazonaws.com/le-mod-bucket/manifest2.json")]
 	url: url::Url,
 
 	path: Option<std::path::PathBuf>
