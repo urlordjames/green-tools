@@ -286,8 +286,8 @@ dependencies = [
 
 [[package]]
 name = "green-lib"
-version = "0.6.0-rc.3"
-source = "git+https://github.com/urlordjames/green-lib.git#e925eab5d89d7728d5e5a7d81871b862b42be870"
+version = "0.6.0"
+source = "git+https://github.com/urlordjames/green-lib.git#b3d4235dcdff9ba211716c293df586f7396aca7b"
 dependencies = [
  "async-recursion",
  "reqwest",
@@ -299,7 +299,7 @@ dependencies = [
 
 [[package]]
 name = "green-tools"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "async-recursion",
  "clap",
