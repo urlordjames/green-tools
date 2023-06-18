@@ -2,6 +2,8 @@ use clap::Parser;
 use sha2::{Sha256, Digest};
 use serde::Deserialize;
 use green_lib::{Directory, File};
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -69,27 +71,19 @@ struct Extras {
 async fn main() {
 	let args = Args::parse();
 
-	let mut directory = match &args.path {
-		Some(path) => to_directory(path, true, args.base_url.unwrap()),
-		None => Directory {
-			name: String::new(),
-			files: vec![],
-			children: vec![]
-		}
-	};
+	let mut directory = args.path.as_ref().map(|path| {
+		to_directory(path, args.base_url.unwrap())
+	}).unwrap_or_default();
 
 	if let Some(extras) = args.extras {
-		let mods_dir = match directory.children.iter_mut().find(|child| child.name == "mods") {
+		let mut mods_dir = match directory.children.get_mut("mods") {
 			Some(child) => child,
 			None => {
-				let mod_dir = Directory {
-					name: String::from("mods"),
-					files: vec![],
-					children: vec![]
-				};
-
-				directory.children.push(mod_dir);
-				directory.children.last_mut().unwrap()
+				let mod_dir = Directory::default();
+				match directory.children.entry(String::from("mods")) {
+					Entry::Vacant(vacant) => vacant.insert(mod_dir),
+					_ => unreachable!()
+				}
 			}
 		};
 
@@ -98,23 +92,21 @@ async fn main() {
 		for (file_name, extra) in extras.curseforge.unwrap_or_default() {
 			let url = format!("https://mediafilez.forgecdn.net/files/{}/{}/{}", extra.id1, extra.id2, file_name);
 
-			mods_dir.files.push(File {
-				name: file_name,
+			mods_dir.files.insert(file_name, File {
 				sha: get_sha(&url).await,
 				url
 			});
 		}
 
 		for (file_name, extra) in extras.custom.unwrap_or_default() {
-			mods_dir.files.push(File {
-				name: file_name,
+			mods_dir.files.insert(file_name, File {
 				sha: get_sha(&extra.url).await,
 				url: extra.url
 			});
 		}
 
 		for (mod_id, extra) in extras.modrinth.unwrap_or_default() {
-			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, mods_dir, extra.deps.as_ref()).await;
+			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, &mut mods_dir, extra.deps.as_ref()).await;
 		}
 	}
 
@@ -144,8 +136,7 @@ async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory
 		};
 	}
 
-	mods_dir.files.push(File {
-		name: jar["filename"].as_str().unwrap().to_string(),
+	mods_dir.files.insert(jar["filename"].as_str().unwrap().to_string(), File {
 		sha: get_sha(url).await,
 		url: url.to_string()
 	});
@@ -185,9 +176,9 @@ async fn get_sha(url: &str) -> String {
 	format!("{:x}", Sha256::digest(&contents))
 }
 
-fn to_directory(path: &std::path::Path, top_level: bool, url: url::Url) -> Directory {
-	let mut children = vec![];
-	let mut files = vec![];
+fn to_directory(path: &std::path::Path, url: url::Url) -> Directory {
+	let mut children = HashMap::new();
+	let mut files = HashMap::new();
 
 	let read_dir = std::fs::read_dir(path).expect("cannot read path");
 	read_dir.filter_map(Result::ok).for_each(|file| {
@@ -196,15 +187,15 @@ fn to_directory(path: &std::path::Path, top_level: bool, url: url::Url) -> Direc
 
 		if file_type.is_dir() {
 			file_name.push('/');
+			let dir_name = path.file_name().unwrap().to_str().expect("invalid directory name").into();
 			let new_url = url.join(&file_name).unwrap();
-			children.push(to_directory(&file.path(), false, new_url));
+			children.insert(dir_name, to_directory(&file.path(), new_url));
 		} else if file_type.is_file() {
 			let new_url = url.join(&file_name).unwrap();
 			let contents = std::fs::read(file.path()).expect("cannot read file");
 			let sha = Sha256::digest(contents);
 
-			files.push(File {
-				name: file_name,
+			files.insert(file_name, File {
 				sha: format!("{:x}", sha),
 				url: new_url.to_string()
 			});
@@ -212,10 +203,6 @@ fn to_directory(path: &std::path::Path, top_level: bool, url: url::Url) -> Direc
 	});
 
 	Directory {
-		name: match top_level {
-			true => String::new(),
-			false => path.file_name().unwrap().to_str().expect("invalid directory name").into()
-		},
 		files,
 		children
 	}
