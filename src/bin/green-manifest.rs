@@ -76,7 +76,7 @@ async fn main() {
 	}).unwrap_or_default();
 
 	if let Some(extras) = args.extras {
-		let mut mods_dir = match directory.children.get_mut("mods") {
+		let mods_dir = match directory.children.get_mut("mods") {
 			Some(child) => child,
 			None => {
 				let mod_dir = Directory::default();
@@ -106,7 +106,7 @@ async fn main() {
 		}
 
 		for (mod_id, extra) in extras.modrinth.unwrap_or_default() {
-			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, &mut mods_dir, extra.deps.as_ref()).await;
+			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, mods_dir, extra.deps.as_ref()).await;
 		}
 	}
 
@@ -183,13 +183,11 @@ fn to_directory(path: &std::path::Path, url: url::Url) -> Directory {
 	let read_dir = std::fs::read_dir(path).expect("cannot read path");
 	read_dir.filter_map(Result::ok).for_each(|file| {
 		let file_type = file.file_type().unwrap();
-		let mut file_name = file.file_name().into_string().expect("invalid file name");
+		let file_name = file.file_name().into_string().expect("invalid file name");
 
 		if file_type.is_dir() {
-			file_name.push('/');
-			let dir_name = path.file_name().unwrap().to_str().expect("invalid directory name").into();
-			let new_url = url.join(&file_name).unwrap();
-			children.insert(dir_name, to_directory(&file.path(), new_url));
+			let new_url = url.join(&format!("/{file_name}")).unwrap();
+			children.insert(file_name, to_directory(&file.path(), new_url));
 		} else if file_type.is_file() {
 			let new_url = url.join(&file_name).unwrap();
 			let contents = std::fs::read(file.path()).expect("cannot read file");
