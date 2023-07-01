@@ -110,7 +110,7 @@ async fn main() {
 		}
 	}
 
-	let manifest_file = std::fs::File::create("manifest.json").unwrap();
+	let manifest_file = std::fs::File::create("manifest2.json").unwrap();
 	serde_json::to_writer(&manifest_file, &directory).expect("cannot serialize manifest");
 }
 
