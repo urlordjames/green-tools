@@ -22,6 +22,7 @@
 					buildInputs = with pkgs; [
 						cargo
 						clippy
+						cargo-deb
 					];
 				};
 
