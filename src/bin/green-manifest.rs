@@ -106,7 +106,7 @@ async fn main() {
 		}
 
 		for (mod_id, extra) in extras.modrinth.unwrap_or_default() {
-			download_modrinth(&get_modrinth_data(&mod_id, &extra).await, mods_dir, extra.deps.as_ref()).await;
+			download_modrinth(get_modrinth_mod_version(&mod_id, &extra).await, mods_dir, extra.deps.as_ref()).await;
 		}
 	}
 
@@ -115,34 +115,55 @@ async fn main() {
 }
 
 #[async_recursion::async_recursion]
-async fn download_modrinth(version: &serde_json::Value, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
-	let jar = &version["files"][0];
-	let url = jar["url"].as_str().unwrap();
+async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
+	let jar = version.files.pop().unwrap();
 
-	let dependencies: &Vec<serde_json::Value> = version["dependencies"].as_array().unwrap();
-	for dependency in dependencies.iter() {
-		match dependency["version_id"].as_str() {
-			Some(dep_version) => download_modrinth(&get_modrinth_version(dep_version).await, mods_dir, None).await,
+	for dependency in version.dependencies.iter() {
+		if dependency.optional { continue; }
+
+		match &dependency.version_id {
+			Some(dep_version) => download_modrinth(get_modrinth_version(&dep_version).await, mods_dir, None).await,
 			None => {
-				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(dependency["project_id"].as_str().unwrap()) {
+				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(&dependency.project_id) {
 					Some(dep_extra) => match &dep_extra.version {
-						ModrinthDepVersion::VersionId(version_id) => download_modrinth(&get_modrinth_version(version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
+						ModrinthDepVersion::VersionId(version_id) => download_modrinth(get_modrinth_version(version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
 						ModrinthDepVersion::Ignore(true) => (),
 						ModrinthDepVersion::Ignore(false) => panic!("ignore = false has no meaning")
 					},
-					None => panic!("you are required to specify the version of dependency {:?}", dependency["project_id"])
+					None => panic!("you are required to specify the version of dependency {:?}", dependency.project_id)
 				};
 			}
 		};
 	}
 
-	mods_dir.files.insert(jar["filename"].as_str().unwrap().to_string(), File {
-		sha: get_sha(url).await,
-		url: url.to_string()
+	mods_dir.files.insert(jar.filename, File {
+		sha: get_sha(&jar.url).await,
+		url: jar.url.to_string()
 	});
 }
 
-async fn get_modrinth_version(version_id: &str) -> serde_json::Value {
+#[derive(Deserialize)]
+struct ModrinthApiFile {
+	url: String,
+	filename: String
+}
+
+#[derive(Deserialize)]
+struct ModrinthApiDependency {
+	version_id: Option<String>,
+	project_id: String,
+	optional: bool
+}
+
+#[derive(Deserialize)]
+struct ModrinthApiVersion {
+	name: String,
+	id: String,
+	files: Vec<ModrinthApiFile>,
+	dependencies: Vec<ModrinthApiDependency>
+}
+
+async fn get_modrinth_version(version_id: &str) -> ModrinthApiVersion {
 	let resp = reqwest::get(format!("https://api.modrinth.com/v2/version/{}", version_id)).await.unwrap();
 	if !resp.status().is_success() {
 		panic!("failed to fetch modrinth version {:?}", version_id);
@@ -151,19 +172,18 @@ async fn get_modrinth_version(version_id: &str) -> serde_json::Value {
 	serde_json::from_str(&resp.text().await.unwrap()).unwrap()
 }
 
-async fn get_modrinth_data(mod_id: &str, extra: &ModrinthExtra) -> serde_json::Value {
+async fn get_modrinth_mod_version(mod_id: &str, extra: &ModrinthExtra) -> ModrinthApiVersion {
 	let resp = reqwest::get(format!("https://api.modrinth.com/v2/project/{}/version", mod_id)).await.unwrap();
 	if !resp.status().is_success() {
 		panic!("failed to fetch modrinth versions for {:?}", extra);
 	}
 
-	let versions: serde_json::Value = serde_json::from_str(&resp.text().await.unwrap()).unwrap();
-	let versions: &Vec<serde_json::Value> = versions.as_array().unwrap();
+	let versions: Vec<ModrinthApiVersion> = serde_json::from_str(&resp.text().await.unwrap()).unwrap();
 
-	versions.iter().find(|v| match &extra.version {
-		ModrinthVersion::Version(version) => v["name"] == *version,
-		ModrinthVersion::VersionId(version_id) => v["id"] == *version_id
-	}).unwrap().clone()
+	versions.into_iter().find(|v| match &extra.version {
+		ModrinthVersion::Version(version) => &v.name == version,
+		ModrinthVersion::VersionId(version_id) => &v.id == version_id
+	}).unwrap()
 }
 
 async fn get_sha(url: &str) -> String {
