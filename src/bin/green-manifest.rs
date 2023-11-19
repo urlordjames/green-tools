@@ -115,8 +115,8 @@ async fn main() {
 }
 
 #[async_recursion::async_recursion]
-async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
-	let jar = version.files.pop().unwrap();
+async fn download_modrinth(version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
+	let jar = version.files.into_iter().find(|f| f.primary).unwrap();
 
 	for dependency in version.dependencies.iter() {
 		if dependency.optional() { continue; }
@@ -144,7 +144,8 @@ async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Direc
 #[derive(Deserialize)]
 struct ModrinthApiFile {
 	url: String,
-	filename: String
+	filename: String,
+	primary: bool
 }
 
 #[derive(Deserialize)]
