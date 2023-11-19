@@ -121,7 +121,7 @@ async fn download_modrinth(version: ModrinthApiVersion, mods_dir: &mut Directory
 			if dependency.optional() { continue; }
 
 			match &dependency.version_id {
-				Some(dep_version) => download_modrinth(get_modrinth_version(&dep_version).await, mods_dir, None).await,
+				Some(dep_version) => download_modrinth(get_modrinth_version(dep_version).await, mods_dir, None).await,
 				None => {
 					match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(&dependency.project_id) {
 						Some(dep_extra) => match &dep_extra.version {
