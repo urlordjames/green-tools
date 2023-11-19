@@ -119,7 +119,7 @@ async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Direc
 	let jar = version.files.pop().unwrap();
 
 	for dependency in version.dependencies.iter() {
-		if dependency.optional { continue; }
+		if dependency.optional() { continue; }
 
 		match &dependency.version_id {
 			Some(dep_version) => download_modrinth(get_modrinth_version(&dep_version).await, mods_dir, None).await,
@@ -149,10 +149,23 @@ struct ModrinthApiFile {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ModrinthApiDependencyType {
+	Required,
+	Optional
+}
+
+#[derive(Deserialize)]
 struct ModrinthApiDependency {
 	version_id: Option<String>,
 	project_id: String,
-	optional: bool
+	dependency_type: ModrinthApiDependencyType
+}
+
+impl ModrinthApiDependency {
+	fn optional(&self) -> bool {
+		matches!(self.dependency_type, ModrinthApiDependencyType::Optional)
+	}
 }
 
 #[derive(Deserialize)]
