@@ -115,8 +115,12 @@ async fn main() {
 }
 
 #[async_recursion::async_recursion]
-async fn download_modrinth(version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
-	let jar = version.files.into_iter().find(|f| f.primary).unwrap();
+async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
+	let jar = match version.files.len() {
+		0 => panic!("there are no files in {:?}", version),
+		1 => version.files.pop().unwrap(),
+		_ => version.files.into_iter().find(|f| f.primary).unwrap()
+	};
 
 	for dependency in version.dependencies.iter() {
 		if dependency.optional() { continue; }
@@ -141,21 +145,21 @@ async fn download_modrinth(version: ModrinthApiVersion, mods_dir: &mut Directory
 	});
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ModrinthApiFile {
 	url: String,
 	filename: String,
 	primary: bool
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ModrinthApiDependencyType {
 	Required,
 	Optional
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ModrinthApiDependency {
 	version_id: Option<String>,
 	project_id: String,
@@ -168,7 +172,7 @@ impl ModrinthApiDependency {
 	}
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ModrinthApiVersion {
 	name: String,
 	id: String,
