@@ -115,31 +115,31 @@ async fn main() {
 }
 
 #[async_recursion::async_recursion]
-async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
-	let jar = version.files.pop().unwrap();
+async fn download_modrinth(version: ModrinthApiVersion, mods_dir: &mut Directory, deps_lock: Option<&'async_recursion std::collections::HashMap<String, ModrinthDep>>) {
+	for jar in version.files {
+		for dependency in version.dependencies.iter() {
+			if dependency.optional() { continue; }
 
-	for dependency in version.dependencies.iter() {
-		if dependency.optional() { continue; }
+			match &dependency.version_id {
+				Some(dep_version) => download_modrinth(get_modrinth_version(&dep_version).await, mods_dir, None).await,
+				None => {
+					match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(&dependency.project_id) {
+						Some(dep_extra) => match &dep_extra.version {
+							ModrinthDepVersion::VersionId(version_id) => download_modrinth(get_modrinth_version(version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
+							ModrinthDepVersion::Ignore(true) => (),
+							ModrinthDepVersion::Ignore(false) => panic!("ignore = false has no meaning")
+						},
+						None => panic!("you are required to specify the version of dependency {:?}", dependency.project_id)
+					};
+				}
+			};
+		}
 
-		match &dependency.version_id {
-			Some(dep_version) => download_modrinth(get_modrinth_version(&dep_version).await, mods_dir, None).await,
-			None => {
-				match deps_lock.unwrap_or(&std::collections::HashMap::new()).get(&dependency.project_id) {
-					Some(dep_extra) => match &dep_extra.version {
-						ModrinthDepVersion::VersionId(version_id) => download_modrinth(get_modrinth_version(version_id).await, mods_dir, dep_extra.deps.as_ref()).await,
-						ModrinthDepVersion::Ignore(true) => (),
-						ModrinthDepVersion::Ignore(false) => panic!("ignore = false has no meaning")
-					},
-					None => panic!("you are required to specify the version of dependency {:?}", dependency.project_id)
-				};
-			}
-		};
+		mods_dir.files.insert(jar.filename, File {
+			sha: get_sha(&jar.url).await,
+			url: jar.url.to_string()
+		});
 	}
-
-	mods_dir.files.insert(jar.filename, File {
-		sha: get_sha(&jar.url).await,
-		url: jar.url.to_string()
-	});
 }
 
 #[derive(Deserialize)]
