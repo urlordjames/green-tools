@@ -201,7 +201,7 @@ async fn get_modrinth_mod_version(mod_id: &str, extra: &ModrinthExtra) -> Modrin
 	versions.into_iter().find(|v| match &extra.version {
 		ModrinthVersion::Version(version) => &v.name == version,
 		ModrinthVersion::VersionId(version_id) => &v.id == version_id
-	}).unwrap()
+	}).unwrap_or_else(|| panic!("failed to find version {extra:?} for {mod_id:?}"))
 }
 
 async fn get_sha(url: &str) -> String {
