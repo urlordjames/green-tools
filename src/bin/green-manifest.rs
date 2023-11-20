@@ -123,7 +123,7 @@ async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Direc
 	};
 
 	for dependency in version.dependencies.iter() {
-		if dependency.optional() { continue; }
+		if !dependency.required() { continue; }
 		match &dependency.version_id {
 			Some(dep_version) => download_modrinth(get_modrinth_version(dep_version).await, mods_dir, None).await,
 			None => {
@@ -156,7 +156,8 @@ struct ModrinthApiFile {
 #[serde(rename_all = "lowercase")]
 enum ModrinthApiDependencyType {
 	Required,
-	Optional
+	Optional,
+	Embedded
 }
 
 #[derive(Debug, Deserialize)]
@@ -167,8 +168,8 @@ struct ModrinthApiDependency {
 }
 
 impl ModrinthApiDependency {
-	fn optional(&self) -> bool {
-		matches!(self.dependency_type, ModrinthApiDependencyType::Optional)
+	fn required(&self) -> bool {
+		matches!(self.dependency_type, ModrinthApiDependencyType::Required)
 	}
 }
 
