@@ -157,7 +157,8 @@ struct ModrinthApiFile {
 enum ModrinthApiDependencyType {
 	Required,
 	Optional,
-	Embedded
+	Embedded,
+	Incompatible
 }
 
 #[derive(Debug, Deserialize)]
