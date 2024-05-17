@@ -133,7 +133,7 @@ async fn download_modrinth(mut version: ModrinthApiVersion, mods_dir: &mut Direc
 						ModrinthDepVersion::Ignore(true) => (),
 						ModrinthDepVersion::Ignore(false) => panic!("ignore = false has no meaning")
 					},
-					None => panic!("you are required to specify the version of dependency {:?}", dependency.project_id)
+					None => panic!("you are required to specify the version of dependency {:?} (for {:?})", dependency.project_id, version.id)
 				};
 			}
 		};
