@@ -14,7 +14,7 @@
 			let pkgs = import nixpkgs {
 				inherit system;
 			};
-			craneLib = crane.lib.${system};
+			craneLib = (crane.mkLib pkgs);
 			green-tools = craneLib.buildPackage {
 				src = craneLib.cleanCargoSource (craneLib.path ./.);
 			}; in {
