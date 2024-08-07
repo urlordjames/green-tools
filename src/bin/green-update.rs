@@ -2,16 +2,23 @@ use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
-	#[clap(long, default_value = "https://s3-us-east-2.amazonaws.com/le-mod-bucket/manifest2.json")]
-	url: url::Url,
+	#[clap(long)]
+	url: Option<url::Url>,
 
 	path: Option<std::path::PathBuf>
 }
 
+const DEFAULT_URL: &str = "https://s3-us-east-2.amazonaws.com/le-mod-bucket/packs.json";
+
 #[tokio::main]
 async fn main() {
 	let args = Args::parse();
-	let directory = green_lib::Directory::from_url(args.url).await.expect("invalid manifest");
+	let directory = match args.url {
+		Some(url) => green_lib::Directory::from_url(url).await.expect("invalid manifest"),
+		None => green_lib::packs::PacksListManifest::from_url(DEFAULT_URL).await.expect("invalid packs list")
+			.get_featured_pack_metadata().expect("can't get featured pack")
+			.to_directory().await.expect("invalid featured pack")
+	};
 
 	let path = match args.path {
 		Some(path) => path,
